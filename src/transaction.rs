@@ -1,11 +1,11 @@
-pub struct Transaction {
-    sender: String,
-    recipient: String,
+pub struct Transaction<'a> {
+    sender: &'a str,
+    recipient: &'a str,
     amount: i32,
 }
 
-impl Transaction {
-    pub fn new(sender: String, recipient: String, amount: i32) -> Transaction {
+impl<'a> Transaction<'a> {
+    pub fn new(sender: &'a str, recipient: &'a str, amount: i32) -> Transaction<'a> {
         Transaction {
             sender,
             recipient,
@@ -14,7 +14,7 @@ impl Transaction {
     }
 }
 
-impl ToString for Transaction {
+impl<'a> ToString for Transaction<'a> {
     fn to_string(&self) -> String {
         format!("{{sender: {}, recipient: {}, amount: {:?}}}", self.sender, self.recipient, self.amount)
     }
