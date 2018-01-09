@@ -1,0 +1,7 @@
+[package]
+name = "blockchain"
+version = "0.1.0"
+authors = ["Graham Keenan <grahamkeenan@hotmail.co.uk>"]
+
+[dependencies]
+rust-crypto = "^0.2"
