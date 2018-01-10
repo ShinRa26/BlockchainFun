@@ -1,11 +1,12 @@
-pub struct Transaction<'a> {
-    sender: &'a str,
-    recipient: &'a str,
+#[derive(Debug, Copy)]
+pub struct Transaction {
+    sender: &'static str,
+    recipient: &'static str,
     amount: i32,
 }
 
-impl<'a> Transaction<'a> {
-    pub fn new(sender: &'a str, recipient: &'a str, amount: i32) -> Transaction<'a> {
+impl Transaction {
+    pub fn new(sender: &'static str, recipient: &'static str, amount: i32) -> Transaction {
         Transaction {
             sender,
             recipient,
@@ -14,8 +15,12 @@ impl<'a> Transaction<'a> {
     }
 }
 
-impl<'a> ToString for Transaction<'a> {
+impl ToString for Transaction {
     fn to_string(&self) -> String {
         format!("{{sender: {}, recipient: {}, amount: {:?}}}", self.sender, self.recipient, self.amount)
     }
+}
+
+impl Clone for Transaction {
+    fn clone(&self) -> Transaction {*self}
 }

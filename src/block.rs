@@ -1,16 +1,20 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use super::Transaction;
 
-pub struct Block<'a> {
+#[derive(Debug)]
+pub struct Block {
     pub index: usize,
     pub timestamp: u64,
-    pub transactions: &'a Vec<Transaction<'a>>,
+    pub transactions: Vec<Transaction>,
     pub proof: i32,
-    pub previous_hash: &'a str,
+    pub previous_hash: &'static str,
 }
 
-impl<'a> Block<'a> {
-    pub fn new(index: usize, transactions: &'static Vec<Transaction<'a>>, proof: i32, previous_hash: &'a str) -> Block<'a> {
+impl Block {
+    pub fn new(index: usize, txns: &[Transaction], proof: i32, previous_hash: &'static str) -> Block {
+        let mut transactions = Vec::new();
+        transactions.clone_from_slice(txns);
+
         Block {
             index,
             timestamp: SystemTime::now()
@@ -24,10 +28,10 @@ impl<'a> Block<'a> {
     }
 }
 
-impl<'a> ToString for Block <'a>{
+impl ToString for Block {
     fn to_string(&self) -> String {
         let mut txns = String::from("transactions: [");
-        for txn in self.transactions {
+        for txn in &self.transactions {
             txns.push_str(&format!("{}, ", txn.to_string()));
         }
         txns.push_str("]");

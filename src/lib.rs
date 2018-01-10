@@ -6,11 +6,10 @@ pub mod block;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
-use std::process;
 use block::Block;
 use transaction::Transaction;
 
-
+#[derive(Debug)]
 pub struct Blockchain {
     chain: Vec<Block>,
     current_txns: Vec<Transaction>,
@@ -18,7 +17,7 @@ pub struct Blockchain {
 
 
 impl Blockchain {
-    pub fn new() -> Blockchain {
+    pub fn new() -> Self {
         Blockchain {
             chain: Vec::new(),
             current_txns: Vec::new(),
@@ -31,7 +30,9 @@ impl Blockchain {
 
     pub fn new_block(&mut self, proof: i32, previous_hash: &'static str) {
         let chain_length = self.chain.len() + 1;
-        self.chain.push(Block::new(chain_length, &self.current_txns, proof, previous_hash));
+
+        self.chain.push(Block::new(chain_length, self.current_txns.as_slice(), proof, previous_hash));
+        self.chain.clear();
     }
 
     pub fn new_transaction(&mut self, sender: &'static str, recipient: &'static str, amount: i32) -> usize {
@@ -50,7 +51,7 @@ impl Blockchain {
         }
     }
 
-    pub fn hash_block(self, block: &Block) -> &'static str {
+    pub fn hash_block(&self, block: &Block) -> & str {
         ""
     }
 }
@@ -86,12 +87,9 @@ mod tests {
     fn test_blocks() {
         let mut bc = Blockchain::new();
         bc.generate_genesis_block();
-
-        bc.new_transaction("Alice", "Bob", 12);
-        bc.new_transaction("Bob", "Alice", 5);
-
+        bc.new_transaction("Alice", "Bob", 100);
+        bc.new_block(1200, ""); // <-- FAILED Fix slice length
         println!("{:?}", bc.to_string());
-        drop(bc);
     }
 
     // #[test]
