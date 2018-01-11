@@ -1,4 +1,8 @@
 extern crate crypto;
+extern crate serde_json;
+
+#[macro_use]
+extern crate serde_derive;
 
 pub mod transaction;
 pub mod block;
@@ -9,12 +13,18 @@ use crypto::sha2::Sha256;
 use block::Block;
 use transaction::Transaction;
 
-// #[derive(Debug)]
+
+pub trait Json {
+    fn to_json(&self) -> String;
+}
+
+
+
+#[derive(Serialize)]
 pub struct Blockchain {
     chain: Vec<Block>,
     current_txns: Vec<Transaction>,
 }
-
 
 impl Blockchain {
     pub fn new() -> Self {
@@ -53,7 +63,7 @@ impl Blockchain {
 
     pub fn hash_block(&self, block: &Block) -> String {
         let mut hasher = Sha256::new();
-        hasher.input_str(&block.to_string());
+        hasher.input_str(&block.to_json());
 
         hasher.result_str()
     }
@@ -72,31 +82,17 @@ impl Blockchain {
 
     fn valid_proof(&self, last_proof: i32, proof: i32, hasher: &mut Sha256) -> bool {
         let guess = format!("{}{}", last_proof, proof);
-        println!("{}", guess);
         hasher.input_str(&guess);
         let guess_hash = hasher.result_str();
         println!("{}", guess_hash);
+
         &guess_hash[0..4] == "0000"
     }
 }
 
-
-
-impl ToString for Blockchain {
-    fn to_string(&self) -> String {
-        let mut chain = String::from("chain: [");
-        for link in &self.chain {
-            chain.push_str(&format!("{}, ", link.to_string()));
-        chain.push_str("], ");
-        }
-
-        let mut curr_txns = String::from("current_transactions: [");
-        for txn in &self.current_txns {
-            curr_txns.push_str(&format!("{}, ", txn.to_string()));
-        }
-        curr_txns.push_str("]");
-
-        format!("{{{}{}}}", chain, curr_txns)
+impl Json for Blockchain {
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
 
@@ -113,7 +109,7 @@ mod tests {
         bc.generate_genesis_block();
         bc.new_transaction("Alice", "Bob", 100);
         bc.new_transaction("Bob", "Alice", 20);
-        bc.new_block(1200, ""); // <-- FAILED Fix slice length
+        bc.new_block(1200, "");
         
         let last_block = bc.last_block().unwrap();
         let digest1 = bc.hash_block(last_block);
@@ -122,13 +118,12 @@ mod tests {
     }
 
     #[test]
-    fn proofs() {
+    fn json_test() {
         let mut bc = Blockchain::new();
-        let mut proof = 0;
-        let last_proof = 100;
-        proof = bc.proof_of_work(last_proof);
-        println!("Proof: {}", proof);
-
-        // assert!(proof != 10000);
+        bc.generate_genesis_block();
+        bc.new_transaction("Alice", "Bob", 50);
+        bc.new_transaction("Carl", "Desmond", 100);
+        bc.new_block(1200, "");
+        println!("{}", bc.to_json());
     }
 }

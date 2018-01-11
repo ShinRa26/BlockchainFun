@@ -1,4 +1,7 @@
-#[derive(Debug, Copy)]
+use super::serde_json;
+use super::Json;
+
+#[derive(Debug, Copy, Serialize)]
 pub struct Transaction {
     sender: &'static str,
     recipient: &'static str,
@@ -23,9 +26,9 @@ impl Transaction {
     }
 }
 
-impl ToString for Transaction {
-    fn to_string(&self) -> String {
-        format!("{{sender: {}, recipient: {}, amount: {:?}}}", self.sender, self.recipient, self.amount)
+impl Json for Transaction {
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
 

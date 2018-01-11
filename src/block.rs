@@ -1,7 +1,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use super::Transaction;
+use super::serde_json;
+use super::Json;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Block {
     pub index: usize,
     pub timestamp: u64,
@@ -29,15 +31,8 @@ impl Block {
     }
 }
 
-impl ToString for Block {
-    fn to_string(&self) -> String {
-        let mut txns = String::from("transactions: [");
-        for txn in &self.transactions {
-            txns.push_str(&format!("{}, ", txn.to_string()));
-        }
-        txns.push_str("]");
-
-        format!("{{index: {:?}, timestamp: {:?}, {}, proof: {:?}, previous_hash: {}}}", 
-            self.index, self.timestamp, txns, self.proof, self.previous_hash)
+impl Json for Block {
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
