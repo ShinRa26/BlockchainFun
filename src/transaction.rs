@@ -13,6 +13,14 @@ impl Transaction {
             amount,
         }
     }
+
+    pub fn blank() -> Self {
+        Transaction {
+            sender: "",
+            recipient: "",
+            amount: 0,
+        }
+    }
 }
 
 impl ToString for Transaction {

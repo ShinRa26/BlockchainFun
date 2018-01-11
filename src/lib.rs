@@ -9,7 +9,7 @@ use crypto::sha2::Sha256;
 use block::Block;
 use transaction::Transaction;
 
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Blockchain {
     chain: Vec<Block>,
     current_txns: Vec<Transaction>,
@@ -32,7 +32,7 @@ impl Blockchain {
         let chain_length = self.chain.len() + 1;
 
         self.chain.push(Block::new(chain_length, self.current_txns.as_slice(), proof, previous_hash));
-        self.chain.clear();
+        self.current_txns.clear();
     }
 
     pub fn new_transaction(&mut self, sender: &'static str, recipient: &'static str, amount: i32) -> usize {
@@ -47,14 +47,40 @@ impl Blockchain {
     pub fn last_block(&self) -> Option<&Block>{
         match self.chain.last() {
             Some(block) => Some(block),
-            None => None
+            None => None,
         }
     }
 
-    pub fn hash_block(&self, block: &Block) -> & str {
-        ""
+    pub fn hash_block(&self, block: &Block) -> String {
+        let mut hasher = Sha256::new();
+        hasher.input_str(&block.to_string());
+
+        hasher.result_str()
+    }
+
+    pub fn proof_of_work(&self, last_proof: i32) -> i32 {
+        let mut proof = 0;
+        let mut hasher = Sha256::new();
+
+        while !self.valid_proof(last_proof, proof, &mut hasher) {
+            proof += 1;
+            hasher.reset(); // Stops the Sha256 from crashing
+        }
+
+        proof
+    }
+
+    fn valid_proof(&self, last_proof: i32, proof: i32, hasher: &mut Sha256) -> bool {
+        let guess = format!("{}{}", last_proof, proof);
+        println!("{}", guess);
+        hasher.input_str(&guess);
+        let guess_hash = hasher.result_str();
+        println!("{}", guess_hash);
+        &guess_hash[0..4] == "0000"
     }
 }
+
+
 
 impl ToString for Blockchain {
     fn to_string(&self) -> String {
@@ -77,28 +103,32 @@ impl ToString for Blockchain {
 
 
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_blocks() {
+    fn hash_blocks() {
         let mut bc = Blockchain::new();
         bc.generate_genesis_block();
         bc.new_transaction("Alice", "Bob", 100);
+        bc.new_transaction("Bob", "Alice", 20);
         bc.new_block(1200, ""); // <-- FAILED Fix slice length
-        println!("{:?}", bc.to_string());
+        
+        let last_block = bc.last_block().unwrap();
+        let digest1 = bc.hash_block(last_block);
+        let digest2 = bc.hash_block(last_block);
+        assert_eq!(digest1, digest2);
     }
 
-    // #[test]
-    // fn hash_block_test() {
-    //     let f = vec![Transaction::new(String::from("send1"), String::from("recv1"), 12), Transaction::new(String::from("send2"), String::from("recv2"), 50)];
-    //     let b = Block::new(1, &f, 100, String::from(""));
-        
-    //     let mut sha = Sha256::new();
-    //     sha.input_str(&b.to_string());
-    //     println!("{}", sha.result_str());
-    // }
+    #[test]
+    fn proofs() {
+        let mut bc = Blockchain::new();
+        let mut proof = 0;
+        let last_proof = 100;
+        proof = bc.proof_of_work(last_proof);
+        println!("Proof: {}", proof);
+
+        // assert!(proof != 10000);
+    }
 }

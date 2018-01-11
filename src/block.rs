@@ -13,6 +13,7 @@ pub struct Block {
 impl Block {
     pub fn new(index: usize, txns: &[Transaction], proof: i32, previous_hash: &'static str) -> Block {
         let mut transactions = Vec::new();
+        transactions.resize(txns.len(), Transaction::blank());
         transactions.clone_from_slice(txns);
 
         Block {
