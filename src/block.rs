@@ -1,7 +1,7 @@
+use super::{serde_json, Json};
+
+use transaction::Transaction;
 use std::time::{SystemTime, UNIX_EPOCH};
-use super::Transaction;
-use super::serde_json;
-use super::Json;
 
 #[derive(Debug, Serialize)]
 pub struct Block {

@@ -1,5 +1,4 @@
-use super::serde_json;
-use super::Json;
+use super::{serde_json, Json};
 
 #[derive(Debug, Copy, Serialize)]
 pub struct Transaction {
