@@ -31,6 +31,7 @@ pub trait Json {
 pub enum HttpStatus {
     OK,
     NotFound,
+    Created,
 }
 
 impl HttpStatus {
@@ -38,6 +39,7 @@ impl HttpStatus {
         match *self {
             HttpStatus::OK => "HTTP/1.1 200 OK\r\n\r\n",
             HttpStatus::NotFound => "HTTP/1.1 404 NOT FOUND\r\n\r\n",
+            HttpStatus::Created => "HTTP/1.1 201 CREATED\r\n\r\n",
         }
     }
 }
@@ -110,35 +112,40 @@ impl Node {
         }
     }
 
-    fn process_get_request(&mut self, mut stream: TcpStream, route: &str) { 
+    fn process_get_request(&mut self, stream: TcpStream, route: &str) { 
         match route {
             "/" => {
                 let contents = "Blockchain interface.\nNavigate to /chain to see the full chain.";
-                write_OK_response(stream, contents);
+                write_response(stream, HttpStatus::OK, contents);
             },
             "/mine" => { 
                 let contents = self.mine_block();
-                write_OK_response(stream, &contents);
+                write_response(stream, HttpStatus::OK, &contents);
             },
             "/chain" => {
                 let contents = self.get_chain_contents();
-                write_OK_response(stream, &contents);
+                write_response(stream, HttpStatus::OK, &contents);
             },
             _ => {
-                write_404_response(stream, "404 Not Found");
+                write_response(stream, HttpStatus::NotFound, "404 Not Found");
             }
         }
     }
 
-    fn process_post_request(&mut self, mut stream: TcpStream, full_request: &[&str], route: &str) {
+    fn process_post_request(&mut self, stream: TcpStream, full_request: &[&str], route: &str) {
         match route {
             "/transaction/new" => {
-                if let Some(data) = full_request.last() {
-
+                // TODO: Prevent malformed JSON being sent -- Fix splitting issues
+                if let Some(raw_data) = full_request.last() {
+                    let data: Vec<&str> = raw_data.split("\u{0}").collect();
+                    let txn: Transaction = serde_json::from_str(data[0]).unwrap();
+                    let index = self.blockchain.new_transaction(txn.sender, txn.recipient, txn.amount);
+                    let response = format!("Message: Transaction will be added to Block {}", index+1);
+                    write_response(stream, HttpStatus::Created, &response);
                 }
             },
             _ => {
-                write_404_response(stream, "404 Not Found");
+                write_response(stream, HttpStatus::NotFound, "404 Not Found");
             }
         }
     }
@@ -157,12 +164,12 @@ impl Node {
         let proof = self.blockchain.proof_of_work(last_proof);
 
         // Once solved, forge a new block
-        self.forge_new_block(last_proof, proof, &last_block)
+        self.forge_new_block(proof, &last_block)
     }
 
-    fn forge_new_block(&mut self, last_proof: i32, proof: i32, last_block: &Block) -> String {
+    fn forge_new_block(&mut self, proof: i32, last_block: &Block) -> String {
         // Receive reward for finding proof
-        self.blockchain.new_transaction(String::from("0"), self.uuid, 1);
+        self.blockchain.new_transaction(String::from("0"), self.uuid.clone(), 1.0);
 
         // Forge the new block by adding it to the chain
         let previous_hash = self.blockchain.hash_block(last_block);
@@ -184,16 +191,12 @@ impl Node {
     }
 }
 
-fn write_OK_response(mut stream: TcpStream, contents: &str) {
-    let resp = format!("{}{}", HttpStatus::OK.as_str(), contents);
+// generalise all the above into one method
+fn write_response(mut stream: TcpStream, status: HttpStatus, contents: &str) {
+    let resp = format!("{}{}", status.as_str(), contents);
     stream.write(resp.as_bytes()).unwrap();
     stream.flush().unwrap();
-}
-
-fn write_404_response(mut stream: TcpStream, contents: &str) {
-    let resp = format!("{}{}", HttpStatus::NotFound.as_str(), contents);
-    stream.write(resp.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    
 }
 
 
@@ -205,6 +208,6 @@ mod tests {
     
     #[test]
     fn test_connection() {
-        Node::run("127.0.0.1:8080", "f4w5s5a5zc5c55s4ds8875s3");
+        Node::run("127.0.0.1:8080");
     }
 }

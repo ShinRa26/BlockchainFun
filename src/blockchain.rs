@@ -21,7 +21,7 @@ impl Blockchain {
     }
 
     pub fn generate_genesis_block(&mut self) {
-        self.new_block(100, String::from("0000000000000000000000000000000000000"));
+        self.new_block(100, String::from("000000000000000000000000000000000000000000000000000000000000000"));
     }
 
     pub fn new_block(&mut self, proof: i32, previous_hash: String) -> Option<&Block> {
@@ -33,7 +33,7 @@ impl Blockchain {
         self.last_block()
     }
 
-    pub fn new_transaction(&mut self, sender: String, recipient: String, amount: i32) -> usize {
+    pub fn new_transaction(&mut self, sender: String, recipient: String, amount: f32) -> usize {
         self.current_txns.push(Transaction::new(sender, recipient, amount));
 
         match self.last_block() {
