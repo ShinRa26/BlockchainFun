@@ -6,7 +6,7 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Blockchain {
     chain: Vec<Block>,
     current_txns: Vec<Transaction>,
@@ -21,14 +21,16 @@ impl Blockchain {
     }
 
     pub fn generate_genesis_block(&mut self) {
-        self.new_block(100, "");
+        self.new_block(100, String::from("0000000000000000000000000000000000000"));
     }
 
-    pub fn new_block(&mut self, proof: i32, previous_hash: &'static str) {
+    pub fn new_block(&mut self, proof: i32, previous_hash: String) -> Option<&Block> {
         let chain_length = self.chain.len() + 1;
 
         self.chain.push(Block::new(chain_length, self.current_txns.as_slice(), proof, previous_hash));
         self.current_txns.clear();
+
+        self.last_block()
     }
 
     pub fn new_transaction(&mut self, sender: &'static str, recipient: &'static str, amount: i32) -> usize {
