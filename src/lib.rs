@@ -15,13 +15,13 @@ pub mod block;
 
 use block::{Block, ResponseBlock};
 use blockchain::Blockchain;
+use transaction::Transaction;
 
 /// Standard Imports
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::process::exit;
-use std::fs::File;
 
 
 pub trait Json {
@@ -45,19 +45,20 @@ impl HttpStatus {
 
 pub struct Node {
     blockchain: Blockchain,
-    uuid: &'static str,
+    uuid: String,
 }
 
 // TODO: Implement asynchronous multithreading
 impl Node {
-    pub fn run(address: &str, uuid: &'static str) {
-        let mut server = Node::create(uuid);
+    pub fn run(address: &str) {
+        let mut server = Node::create();
         let listener = server.connect(address);
         server.listen(listener);
     }
 
-    fn create(uuid: &'static str) -> Self {
+    fn create() -> Self {
         let mut blockchain = Blockchain::new();
+        let uuid = Uuid::new_v4().to_simple_string();
         blockchain.generate_genesis_block();
 
         Node {
@@ -93,19 +94,24 @@ impl Node {
         // Loop here?
         stream.read(&mut buffer).unwrap();
         let buf_to_str = String::from_utf8_lossy(&buffer[..]);
-        let request: Vec<&str> = buf_to_str.split(" ").collect();
+        let request: Vec<&str> = buf_to_str.split("\n").collect();
+        let method: Vec<&str> = buf_to_str.split(" ").collect();
 
-        match request[0] {
-            "GET" => self.process_get_request(stream, &request[1..]),
-            "POST" => self.process_post_request(stream, &request[1..]),
+        match method[0] {
+            "GET" => {
+                self.process_get_request(stream, &method[1]);
+            },
+            "POST" => {
+                self.process_post_request(stream, &request, &method[1]);
+            }
             _ => {
-                eprintln!("Unsupported HTTP request!")
+                eprintln!("Unsupported HTTP Request!");
             }
         }
     }
 
-    fn process_get_request(&mut self, mut stream: TcpStream, request: &[&str]) { 
-        match request[0] {
+    fn process_get_request(&mut self, mut stream: TcpStream, route: &str) { 
+        match route {
             "/" => {
                 let contents = "Blockchain interface.\nNavigate to /chain to see the full chain.";
                 write_OK_response(stream, contents);
@@ -124,8 +130,17 @@ impl Node {
         }
     }
 
-    fn process_post_request(&mut self, mut stream: TcpStream, request: &[&str]) {
-        // TODO: Handle post requests
+    fn process_post_request(&mut self, mut stream: TcpStream, full_request: &[&str], route: &str) {
+        match route {
+            "/transaction/new" => {
+                if let Some(data) = full_request.last() {
+
+                }
+            },
+            _ => {
+                write_404_response(stream, "404 Not Found");
+            }
+        }
     }
 
     fn mine_block(&mut self) -> String {
@@ -147,7 +162,7 @@ impl Node {
 
     fn forge_new_block(&mut self, last_proof: i32, proof: i32, last_block: &Block) -> String {
         // Receive reward for finding proof
-        self.blockchain.new_transaction("0", self.uuid, 1);
+        self.blockchain.new_transaction(String::from("0"), self.uuid, 1);
 
         // Forge the new block by adding it to the chain
         let previous_hash = self.blockchain.hash_block(last_block);
@@ -181,14 +196,15 @@ fn write_404_response(mut stream: TcpStream, contents: &str) {
     stream.flush().unwrap();
 }
 
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
     
     #[test]
     fn test_connection() {
-        let uuid = Uuid::new_v4().to_simple_string();
-        // TODO: Fix UUID reference issues
         Node::run("127.0.0.1:8080", "f4w5s5a5zc5c55s4ds8875s3");
     }
 }

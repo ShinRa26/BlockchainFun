@@ -1,14 +1,14 @@
 use super::{serde_json, Json};
 
-#[derive(Debug, Copy, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Transaction {
-    sender: &'static str,
-    recipient: &'static str,
+    sender: String,
+    recipient: String,
     amount: i32,
 }
 
 impl Transaction {
-    pub fn new(sender: &'static str, recipient: &'static str, amount: i32) -> Transaction {
+    pub fn new(sender: String, recipient: String, amount: i32) -> Transaction {
         Transaction {
             sender,
             recipient,
@@ -18,8 +18,8 @@ impl Transaction {
 
     pub fn blank() -> Self {
         Transaction {
-            sender: "",
-            recipient: "",
+            sender: String::from(""),
+            recipient: String::from(""),
             amount: 0,
         }
     }
@@ -27,7 +27,7 @@ impl Transaction {
 
 impl Json for Transaction {
     fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string_pretty(self).unwrap()
     }
 }
 

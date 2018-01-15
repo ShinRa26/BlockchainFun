@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ResponseBlock<'a> {
-    pub message: &'static str,
+    pub message: &'a str,
     pub index: usize,
     pub transactions: &'a Vec<Transaction>,
     pub proof: i32,
@@ -13,7 +13,7 @@ pub struct ResponseBlock<'a> {
 }
 
 impl<'a> ResponseBlock<'a> {
-    pub fn new(message: &'static str, index: usize, transactions: &'a Vec<Transaction>, proof: i32, previous_hash: String) -> ResponseBlock<'a>{
+    pub fn new(message: &'a str, index: usize, transactions: &'a Vec<Transaction>, proof: i32, previous_hash: String) -> ResponseBlock<'a>{
         ResponseBlock {
             message,
             index,
@@ -26,7 +26,7 @@ impl<'a> ResponseBlock<'a> {
 
 impl<'a> Json for ResponseBlock<'a> {
     fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string_pretty(self).unwrap()
     }
 }
 
@@ -60,6 +60,6 @@ impl Block {
 
 impl Json for Block {
     fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string_pretty(self).unwrap()
     }
 }

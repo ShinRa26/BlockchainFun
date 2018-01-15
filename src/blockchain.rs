@@ -33,7 +33,7 @@ impl Blockchain {
         self.last_block()
     }
 
-    pub fn new_transaction(&mut self, sender: &'static str, recipient: &'static str, amount: i32) -> usize {
+    pub fn new_transaction(&mut self, sender: String, recipient: String, amount: i32) -> usize {
         self.current_txns.push(Transaction::new(sender, recipient, amount));
 
         match self.last_block() {
@@ -80,6 +80,6 @@ impl Blockchain {
 
 impl Json for Blockchain {
     fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string_pretty(self).unwrap()
     }
 }
