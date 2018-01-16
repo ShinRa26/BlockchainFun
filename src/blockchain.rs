@@ -6,9 +6,10 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Blockchain {
-    chain: Vec<Block>,
+    pub chain: Vec<Block>,
+    pub length: usize,
     current_txns: Vec<Transaction>,
 }
 
@@ -16,6 +17,7 @@ impl Blockchain {
     pub fn new() -> Self {
         Blockchain {
             chain: Vec::new(),
+            length: 0,
             current_txns: Vec::new(),
         }
     }
@@ -29,6 +31,7 @@ impl Blockchain {
 
         self.chain.push(Block::new(chain_length, self.current_txns.as_slice(), proof, previous_hash));
         self.current_txns.clear();
+        self.length += 1;
 
         self.last_block()
     }
@@ -68,7 +71,7 @@ impl Blockchain {
         proof
     }
 
-    fn valid_proof(&self, last_proof: i32, proof: i32, hasher: &mut Sha256) -> bool {
+    pub fn valid_proof(&self, last_proof: i32, proof: i32, hasher: &mut Sha256) -> bool {
         let guess = format!("{}{}", last_proof, proof);
         hasher.input_str(&guess);
         let guess_hash = hasher.result_str();

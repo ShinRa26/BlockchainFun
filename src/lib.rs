@@ -1,12 +1,17 @@
+// TODO: Extract Node out into separate file
+
 extern crate crypto;
 extern crate serde_json;
 extern crate uuid;
+extern crate reqwest;
 
 #[macro_use]
 extern crate serde_derive;
 
 /// Crate Imports
 use uuid::Uuid;
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
 /// Module imports
 pub mod blockchain;
@@ -19,9 +24,11 @@ use transaction::Transaction;
 
 /// Standard Imports
 use std::io::prelude::*;
+use std::io::Read;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::process::exit;
+use std::collections::HashSet;
 
 
 pub trait Json {
@@ -48,6 +55,7 @@ impl HttpStatus {
 pub struct Node {
     blockchain: Blockchain,
     uuid: String,
+    nodes: HashSet<String>,
 }
 
 // TODO: Implement asynchronous multithreading
@@ -63,9 +71,12 @@ impl Node {
         let uuid = Uuid::new_v4().to_simple_string();
         blockchain.generate_genesis_block();
 
+        let mut nodes = HashSet::new();
+
         Node {
             blockchain,
             uuid,
+            nodes,
         }
     }
 
@@ -188,6 +199,68 @@ impl Node {
 
     fn get_chain_contents(&mut self) -> String {
         self.blockchain.to_json()
+    }
+
+    fn register_node(&mut self, address: String) {
+        let addr_split: Vec<&str> = address.split("//").collect();
+        self.nodes.insert(addr_split[1].to_owned());
+    }
+
+    fn valid_chain(&self, chain: &Blockchain) -> bool {
+        let mut current_index = 1;
+        let mut hasher = Sha256::new();
+        let mut last_block = &chain.chain[0];
+        let mut valid = true;
+
+        while current_index < chain.chain.len() {
+            let block = &chain.chain[current_index];
+            println!("{}", last_block.to_json());
+            println!("{}", block.to_json());
+            println!("\n------------\n");
+
+            // Check that the previous hash of the block is correct
+            if block.previous_hash != chain.hash_block(last_block) {
+                valid = false;
+                break;
+            }
+
+            // Check that the proof of work is correct
+            if !chain.valid_proof(last_block.proof, block.proof, &mut hasher) {
+                valid = false;
+                break;
+            }
+
+            last_block = block;
+            current_index += 1;
+            hasher.reset();
+        }
+
+        valid
+    }
+
+    fn resolve_conflicts(&self) -> bool {
+        let neighbours = &self.nodes;
+        let mut new_chain = Blockchain::new();
+
+        // Only looking for chains longer than ours
+        let mut max_length = self.blockchain.chain.len();
+
+        // Grab and verify all chains from the nodes on the network
+        for node in neighbours {
+            let mut address = format!("http://{}/chain", node);
+            let mut response = reqwest::get(&address).unwrap(); //Fix
+
+            if response.status() == reqwest::StatusCode::Ok {
+                let chain_text = response.text().unwrap();
+                let other_blockchain: Blockchain = serde_json::from_str(&chain_text).unwrap();
+
+                // TODO: Start from here!
+
+            }
+        }
+
+
+        true
     }
 }
 

@@ -30,7 +30,7 @@ impl<'a> Json for ResponseBlock<'a> {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
     pub index: usize,
     pub timestamp: u64,
