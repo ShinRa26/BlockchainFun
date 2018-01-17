@@ -155,6 +155,10 @@ impl Node {
                     write_response(stream, HttpStatus::Created, &response);
                 }
             },
+            "/nodes/register" => {
+                let content = self.register_all_nodes();
+                write_response(stream, HttpStatus::Created, &content);
+            }
             _ => {
                 write_response(stream, HttpStatus::NotFound, "404 Not Found");
             }
@@ -206,6 +210,10 @@ impl Node {
         self.nodes.insert(addr_split[1].to_owned());
     }
 
+    fn register_all_nodes(&mut self) -> String {
+        String::from("")
+    }
+
     fn valid_chain(&self, chain: &Blockchain) -> bool {
         let mut current_index = 1;
         let mut hasher = Sha256::new();
@@ -238,9 +246,9 @@ impl Node {
         valid
     }
 
-    fn resolve_conflicts(&self) -> bool {
+    fn resolve_conflicts(&mut self) -> bool {
         let neighbours = &self.nodes;
-        let mut new_chain = Blockchain::new();
+        let mut new_chain: Vec<Block>= Vec::new();
 
         // Only looking for chains longer than ours
         let mut max_length = self.blockchain.chain.len();
@@ -253,14 +261,22 @@ impl Node {
             if response.status() == reqwest::StatusCode::Ok {
                 let chain_text = response.text().unwrap();
                 let other_blockchain: Blockchain = serde_json::from_str(&chain_text).unwrap();
+                let length = &other_blockchain.length;
 
-                // TODO: Start from here!
-
+                // Check if the length is longer and the chain is valid
+                if (length > &max_length) && (self.valid_chain(&other_blockchain)) {
+                    max_length = *length;
+                    new_chain = other_blockchain.chain;
+                }
             }
         }
 
-
-        true
+        // Replace the chain if a new, valid, and longer chain is discovered
+        if new_chain.len() > 0 {
+            self.blockchain.chain = new_chain;
+            return true
+        }
+        return false
     }
 }
 
@@ -281,6 +297,6 @@ mod tests {
     
     #[test]
     fn test_connection() {
-        Node::run("127.0.0.1:8080");
+        Node::run("0.0.0.0:8080");
     }
 }
