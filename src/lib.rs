@@ -12,6 +12,7 @@ extern crate serde_derive;
 use uuid::Uuid;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
+use serde_json::{Value};
 
 /// Module imports
 pub mod blockchain;
@@ -61,17 +62,18 @@ pub struct Node {
 // TODO: Implement asynchronous multithreading
 impl Node {
     pub fn run(address: &str) {
-        let mut server = Node::create();
+        let mut server = Node::create(address);
         let listener = server.connect(address);
         server.listen(listener);
     }
 
-    fn create() -> Self {
+    fn create(address: &str) -> Self {
         let mut blockchain = Blockchain::new();
         let uuid = Uuid::new_v4().to_simple_string();
         blockchain.generate_genesis_block();
 
         let mut nodes = HashSet::new();
+        nodes.insert(address.to_owned());
 
         Node {
             blockchain,
@@ -137,6 +139,14 @@ impl Node {
                 let contents = self.get_chain_contents();
                 write_response(stream, HttpStatus::OK, &contents);
             },
+            "/nodes" => {
+                let contents = self.get_node_list();
+                write_response(stream, HttpStatus::OK, &contents);
+            },
+            "/nodes/resolve" => {
+                let contents = self.consensus();
+                write_response(stream, HttpStatus::OK, &contents);
+            },
             _ => {
                 write_response(stream, HttpStatus::NotFound, "404 Not Found");
             }
@@ -155,10 +165,16 @@ impl Node {
                     write_response(stream, HttpStatus::Created, &response);
                 }
             },
+            // Maybe have to move nodes over to the chain itself
             "/nodes/register" => {
-                let content = self.register_all_nodes();
-                write_response(stream, HttpStatus::Created, &content);
-            }
+                if let Some(raw_data) = full_request.last() {
+                    let data: Vec<&str> = raw_data.split("\u{0}").collect();
+                    let json_data: Value = serde_json::from_str(data[0]).unwrap();
+                    let nodes_list = json_data["nodes"].as_array().unwrap();
+                    let content = self.register_all_nodes(nodes_list);
+                    write_response(stream, HttpStatus::Created, &content);
+                }
+            },
             _ => {
                 write_response(stream, HttpStatus::NotFound, "404 Not Found");
             }
@@ -205,13 +221,40 @@ impl Node {
         self.blockchain.to_json()
     }
 
+    fn get_node_list(&mut self) -> String {
+        let mut node_list = String::from("Nodes: [\n");
+        for node in &self.nodes {
+            node_list.push_str(&node);
+            node_list.push_str(",\n");
+        }
+        node_list.push_str("]");
+        node_list
+    }
+
+    fn register_all_nodes(&mut self, nodes: &Vec<Value>) -> String {
+        for node in nodes {
+            let addr = node.as_str().unwrap();
+            self.register_node(addr.to_owned());
+        }
+
+        String::from("New nodes have been registered.")
+    }
+
     fn register_node(&mut self, address: String) {
         let addr_split: Vec<&str> = address.split("//").collect();
         self.nodes.insert(addr_split[1].to_owned());
     }
 
-    fn register_all_nodes(&mut self) -> String {
-        String::from("")
+    fn consensus(&mut self) -> String {
+        let replaced = self.resolve_conflicts();
+
+        if replaced {
+            let resp = String::from("Our chain has been replaced and updated");
+            return resp
+        }
+
+        let resp = String::from("Our chain is authoritative");
+        resp
     }
 
     fn valid_chain(&self, chain: &Blockchain) -> bool {
@@ -255,7 +298,7 @@ impl Node {
 
         // Grab and verify all chains from the nodes on the network
         for node in neighbours {
-            let mut address = format!("http://{}/chain", node);
+            let address = format!("http://{}/chain", node);
             let mut response = reqwest::get(&address).unwrap(); //Fix
 
             if response.status() == reqwest::StatusCode::Ok {
@@ -297,6 +340,6 @@ mod tests {
     
     #[test]
     fn test_connection() {
-        Node::run("0.0.0.0:8080");
+        Node::run("127.0.0.1:8080");
     }
 }
