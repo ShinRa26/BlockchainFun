@@ -79,7 +79,7 @@ impl Node {
         blockchain.generate_genesis_block();
 
         let mut nodes = HashSet::new();
-        nodes.insert(address.to_owned());
+        // nodes.insert(address.to_owned());
 
         Node {
             blockchain,
@@ -259,7 +259,8 @@ impl Node {
     /// Registers a single node on the network
     fn register_node(&mut self, address: String) {
         let addr_split: Vec<&str> = address.split("//").collect();
-        self.nodes.insert(addr_split[1].to_owned());
+        println!("{}", addr_split[0]);
+        self.nodes.insert(addr_split[0].to_owned());
     }
 
     /// Checks for largest blockchain on the network and replaces the current node's with the longest one
@@ -359,6 +360,6 @@ mod tests {
     
     #[test]
     fn test_connection() {
-        Node::run("127.0.0.1:8080");
+        Node::run("127.0.0.1:5000");
     }
 }
