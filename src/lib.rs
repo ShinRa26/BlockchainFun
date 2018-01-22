@@ -31,11 +31,12 @@ use std::net::TcpStream;
 use std::process::exit;
 use std::collections::HashSet;
 
-
+/// Trait for converting to Json
 pub trait Json {
     fn to_json(&self) -> String;
 }
 
+/// Supported HTTP Statuses
 pub enum HttpStatus {
     OK,
     NotFound,
@@ -53,20 +54,25 @@ impl HttpStatus {
 }
 
 
+/**
+Node on the blockchain. Holds a representation of the blockchain.
+*/
 pub struct Node {
     blockchain: Blockchain,
     uuid: String,
     nodes: HashSet<String>,
 }
 
-// TODO: Implement asynchronous multithreading
+
 impl Node {
+    /// Creates and runs the node server on a given address
     pub fn run(address: &str) {
         let mut server = Node::create(address);
         let listener = server.connect(address);
         server.listen(listener);
     }
 
+    /// Creates a node instance with the given address
     fn create(address: &str) -> Self {
         let mut blockchain = Blockchain::new();
         let uuid = Uuid::new_v4().to_simple_string();
@@ -82,6 +88,7 @@ impl Node {
         }
     }
 
+    /// Puts the node online on the given address
     fn connect(&self, address: &str) -> TcpListener {
         match TcpListener::bind(address) {
             Ok(server) => server,
@@ -92,6 +99,7 @@ impl Node {
         }
     }
 
+    /// Listens for incoming connections
     fn listen(&mut self, listener: TcpListener) {
         for stream in listener.incoming() {
             match stream {
@@ -104,6 +112,7 @@ impl Node {
         }
     }
 
+    /// Processes a connection to obtain the HTTP method
     fn handle_connection(&mut self, mut stream: TcpStream) {
         let mut buffer = [0; 1024];
         // Loop here?
@@ -125,6 +134,7 @@ impl Node {
         }
     }
 
+    /// Processes all GET requests. Primitive routing!
     fn process_get_request(&mut self, stream: TcpStream, route: &str) { 
         match route {
             "/" => {
@@ -153,6 +163,7 @@ impl Node {
         }
     }
 
+    /// Processes all POST requests. Primitive routing!
     fn process_post_request(&mut self, stream: TcpStream, full_request: &[&str], route: &str) {
         match route {
             "/transaction/new" => {
@@ -181,6 +192,7 @@ impl Node {
         }
     }
 
+    /// Mines a block on the blockchain and adds it to the chain
     fn mine_block(&mut self) -> String {
         // Run proof of work to get next proof
         let copy_bc = self.blockchain.clone(); // Dirty clone!
@@ -198,6 +210,7 @@ impl Node {
         self.forge_new_block(proof, &last_block)
     }
 
+    /// Creates a new block to be added to the blockchain
     fn forge_new_block(&mut self, proof: i32, last_block: &Block) -> String {
         // Receive reward for finding proof
         self.blockchain.new_transaction(String::from("0"), self.uuid.clone(), 1.0);
@@ -217,10 +230,12 @@ impl Node {
         resp_block.to_json()
     }
 
+    /// Get a JSON representation of the current state of the blockchain
     fn get_chain_contents(&mut self) -> String {
         self.blockchain.to_json()
     }
 
+    /// Get a list of all connected nodes on the network
     fn get_node_list(&mut self) -> String {
         let mut node_list = String::from("Nodes: [\n");
         for node in &self.nodes {
@@ -231,6 +246,7 @@ impl Node {
         node_list
     }
 
+    /// Registers the given list of nodes as active nodes on the network
     fn register_all_nodes(&mut self, nodes: &Vec<Value>) -> String {
         for node in nodes {
             let addr = node.as_str().unwrap();
@@ -240,11 +256,13 @@ impl Node {
         String::from("New nodes have been registered.")
     }
 
+    /// Registers a single node on the network
     fn register_node(&mut self, address: String) {
         let addr_split: Vec<&str> = address.split("//").collect();
         self.nodes.insert(addr_split[1].to_owned());
     }
 
+    /// Checks for largest blockchain on the network and replaces the current node's with the longest one
     fn consensus(&mut self) -> String {
         let replaced = self.resolve_conflicts();
 
@@ -257,6 +275,7 @@ impl Node {
         resp
     }
 
+    /// Checks if new blockchain is a valid one
     fn valid_chain(&self, chain: &Blockchain) -> bool {
         let mut current_index = 1;
         let mut hasher = Sha256::new();
@@ -289,6 +308,7 @@ impl Node {
         valid
     }
 
+    /// Resolves any conflicts on the blockchain for each node
     fn resolve_conflicts(&mut self) -> bool {
         let neighbours = &self.nodes;
         let mut new_chain: Vec<Block>= Vec::new();
@@ -323,12 +343,11 @@ impl Node {
     }
 }
 
-// generalise all the above into one method
+/// Writes a HTTP response from the server to client
 fn write_response(mut stream: TcpStream, status: HttpStatus, contents: &str) {
     let resp = format!("{}{}", status.as_str(), contents);
     stream.write(resp.as_bytes()).unwrap();
     stream.flush().unwrap();
-    
 }
 
 
