@@ -32,19 +32,18 @@ pub struct Node {
 impl Node {
     /// Creates and runs the node server on a given address
     pub fn run(address: &str) {
-        let mut server = Node::create(address);
+        let mut server = Node::create();
         let listener = server.connect(address);
         server.listen(listener);
     }
 
     /// Creates a node instance with the given address
-    fn create(address: &str) -> Self {
+    fn create() -> Self {
         let mut blockchain = Blockchain::new();
         let uuid = Uuid::new_v4().to_simple_string();
         blockchain.generate_genesis_block();
 
-        let mut nodes = HashSet::new();
-        // nodes.insert(address.to_owned());
+        let nodes = HashSet::new();
 
         Node {
             blockchain,
